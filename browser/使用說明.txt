@@ -1,7 +1,7 @@
-銷售簡報工作室 v2.0（免安裝版）
+銷售簡報工作室 v2.1（免安裝版）
 
 1. 將 ZIP 完整解壓縮。
-2. 雙擊「銷售簡報工作室-v2.0.html」，用 Edge 或 Chrome 開啟。
+2. 雙擊「銷售簡報工作室-v2.1.html」，用 Edge 或 Chrome 開啟。
 3. 選取原始 WTD77Report Excel，可一次多選不同週。
 4. 等待「匯入成功」，選品類、排除 FA 與分析方式。
 5. 按「產生並下載一頁 PPT」。沒有自動下載時，按下方下載連結。
@@ -20,4 +20,6 @@
 已以 Chromium 載入完整 HTML 測試實際報表匯入及PPT下載，無網路請求與後端。
 測試環境管理政策禁止 file:// 導覽，因此直接雙擊檔案的動作尚未在Windows實測。
 
-內嵌套件：SheetJS xlsx 0.18.5（Apache-2.0）、PptxGenJS 3.12.0（MIT），授權見授權資料夾。
+內嵌套件：SheetJS xlsx 0.18.5（Apache-2.0）、PptxGenJS 4.0.1（MIT），授權見授權資料夾。
+
+2.1修正：表格垂直對齊使用標準middle值；輸出時確保投影片物件ID不重複。已驗證XML、ZIP、關聯與LibreOffice開檔轉PDF。尚未在Microsoft PowerPoint實測。

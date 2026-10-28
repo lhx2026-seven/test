@@ -1,10 +1,10 @@
 # 銷售簡報工作室
 
-## 推薦：v2.0 免安裝 HTML 版
+## 推薦：v2.1 免安裝 HTML 版
 
-**[下載免安裝版 ZIP](https://github.com/lhx2026-seven/test/raw/refs/heads/main/downloads/sales-ppt-browser-v2.0.zip)**
+**[下載免安裝版 ZIP](https://github.com/lhx2026-seven/test/raw/refs/heads/main/downloads/sales-ppt-browser-v2.1.zip)**
 
-解壓縮後，雙擊 **銷售簡報工作室-v2.0.html**，以 Edge 或 Chrome 開啟。不需要執行 BAT、安裝 Python 或啟動本機服務，使用時不需要網路。支援原始 WTD77Report Excel 多週匯入、公司排行表格、逐週總淨銷量趨勢，產生可編輯 PPT。所有解析與產出均在瀏覽器內完成，內嵌套件與授權已包含。
+解壓縮後，雙擊 **銷售簡報工作室-v2.1.html**，以 Edge 或 Chrome 開啟。不需要執行 BAT、安裝 Python 或啟動本機服務，使用時不需要網路。支援原始 WTD77Report Excel 多週匯入、公司排行表格、逐週總淨銷量趨勢，產生可編輯 PPT。所有解析與產出均在瀏覽器內完成，內嵌套件與授權已包含。
 
 已以瀏覽器載入完整 HTML 內容驗證真實報表匯入、公司排行 PPT 及雙週原生圖表下載，確認無 HTTP 請求。不依賴 Python 後端。測試環境政策禁止 file:// 導覽，尚未在實體 Windows 驗證直接雙擊流程。
 
@@ -75,3 +75,6 @@ v1.4：77Report 自動對應欄位，不顯示三個欄位選單；一般格式�
 
 
 v1.4 已於 Linux Chromium 實際操作使用者77Report匯入、公司排行PPT下載、一般排行下載、空報表失敗提示、超過20MB的有效Excel匯入及下載，全部通過。尚未於實體Windows驗證。重新下載新版後，先關閉舊黑色視窗與舊頁面，再在新資料夾執行啟動器；頁面標示 v1.4。
+
+
+v2.1 修正原生表格非法anchor值及重複物件ID，輸出前檢查並整理ID。已用真實報表重新驗證瀏覽器下載、ZIP完整性、XML解析、ID唯一性、對齊合法值及關聯目標，並使用LibreOffice開啟排行與趨勢PPTX轉PDF。Microsoft PowerPoint尚未實測。
