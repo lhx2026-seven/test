@@ -53,6 +53,16 @@ class WorkflowTests(unittest.TestCase):
         frame.loc[frame.index[0],'通路']='FA exclusive'
         self.assertEqual(len(filtered(frame,'CORE',True)),1)
 
+    def test_mapping_changes_analysis(self):
+        f=pd.DataFrame({'商品':['A','B'],'別名':['X','Y'],'件數':[2,8],'份數':[30,70],'分類':['甲','乙']})
+        first=prepare(f,'商品','件數','分類')
+        second=prepare(f,'別名','份數',None)
+        self.assertEqual(first['銷量'].sum(),10)
+        self.assertEqual(second['銷量'].sum(),100)
+        self.assertEqual(second['品項'].tolist(),['X','Y'])
+        self.assertEqual(first['品類'].tolist(),['甲','乙'])
+        self.assertEqual(second['品類'].tolist(),['未分類','未分類'])
+
     def test_invalid_quantities(self):
         for values in [['x'],[-1],[0],['']]:
             with self.assertRaises(ValueError): prepare(pd.DataFrame({'p':['A'],'q':values}),'p','q',None)
