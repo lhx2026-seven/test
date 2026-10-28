@@ -120,6 +120,10 @@ def generate(data, mode, title, period):
     output=BytesIO();prs.save(output);return output.getvalue()
 
 class Handler(BaseHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def do_GET(self):
         if self.path=='/':
             self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8');self.end_headers();self.wfile.write((ROOT/'index.html').read_bytes())
@@ -129,7 +133,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             length=int(self.headers.get('Content-Length',0))
-            if not 0<length<30_000_000: raise ValueError('檔案過大，請使用 20 MB 以下報表。')
+            if length <= 0: raise ValueError('未收到報表內容，請重新選取檔案。')
             request=json.loads(self.rfile.read(length))
             reports=request.get('reports') or [request]
             frames=[read_report(r['name'],base64.b64decode(r['data'],validate=True)) for r in reports]
@@ -160,6 +164,10 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--no-browser',action='store_true');parser.add_argument('--port',type=int,default=8765);args=parser.parse_args()
-    server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
+    try:
+        server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
+    except OSError:
+        server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+    args.port=server.server_port
     if not args.no_browser: threading.Timer(.8,lambda:webbrowser.open(f'http://127.0.0.1:{args.port}')).start()
     print(f'銷售簡報工作室已啟動，連接埠 {args.port}；Ctrl+C 結束。',flush=True);server.serve_forever()
