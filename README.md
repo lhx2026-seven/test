@@ -1,5 +1,20 @@
 # 銷售簡報工作室
 
+## 推薦：v2.0 免安裝 HTML 版
+
+**[下載免安裝版 ZIP](https://github.com/lhx2026-seven/test/raw/refs/heads/main/downloads/sales-ppt-browser-v2.0.zip)**
+
+解壓縮後，雙擊 **銷售簡報工作室-v2.0.html**，以 Edge 或 Chrome 開啟。不需要執行 BAT、安裝 Python 或啟動本機服務，使用時不需要網路。支援原始 WTD77Report Excel 多週匯入、公司排行表格、逐週總淨銷量趨勢，產生可編輯 PPT。所有解析與產出均在瀏覽器內完成，內嵌套件與授權已包含。
+
+已以瀏覽器載入完整 HTML 內容驗證真實報表匯入、公司排行 PPT 及雙週原生圖表下載，確認無 HTTP 請求。不依賴 Python 後端。測試環境政策禁止 file:// 導覽，尚未在實體 Windows 驗證直接雙擊流程。
+
+原始碼：browser/ui.html、browser/app.js；可分別修改後重新內嵌套件產生單檔 HTML。browser/使用說明.txt 記錄資料口徑與限制。
+
+## 舊版 Python 工具說明
+
+以下啟動說明僅適用舊版，請勿直接雙擊舊版 index.html。
+
+
 ## 下載程式
 
 **[點此下載 Windows 程式 ZIP](https://github.com/lhx2026-seven/test/raw/refs/heads/main/downloads/sales-ppt-windows-v1.4.zip)**
