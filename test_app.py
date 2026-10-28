@@ -2,6 +2,7 @@ import unittest
 from io import BytesIO
 from pptx import Presentation
 import pandas as pd
+from ranking import ranking_slide, filtered
 from app import read_report, prepare, generate, ROOT
 
 class WorkflowTests(unittest.TestCase):
@@ -38,6 +39,19 @@ class WorkflowTests(unittest.TestCase):
         data=prepare(frame,'品項','銷量','品類')
         self.assertEqual(data['銷量'].sum(),9)
         self.assertEqual(data['品項'].nunique(),2)
+        output=ranking_slide([frame],['測試週'],category='CORE',exclude_fa=True)
+        table=next(shape.table for shape in Presentation(BytesIO(output)).slides[0].shapes if shape.has_table)
+        self.assertEqual(table.cell(0,5).text,'業績')
+        self.assertEqual(table.cell(3,4).text,'9')
+        self.assertEqual(table.cell(3,5).text,'$900')
+        self.assertEqual(table.cell(1,0).text,'同名')
+        second=frame.copy();second.attrs['start']='2026-10-26'
+        output=ranking_slide([frame,second],['第一週','第二週'],category='CORE')
+        table=next(shape.table for shape in Presentation(BytesIO(output)).slides[0].shapes if shape.has_table)
+        self.assertIn('↑0',table.cell(3,5).text)
+        with self.assertRaises(ValueError):ranking_slide([frame,frame],['第一週','重複週'],category='CORE')
+        frame.loc[frame.index[0],'通路']='FA exclusive'
+        self.assertEqual(len(filtered(frame,'CORE',True)),1)
 
     def test_invalid_quantities(self):
         for values in [['x'],[-1],[0],['']]:

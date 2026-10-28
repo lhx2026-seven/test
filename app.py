@@ -7,6 +7,7 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.chart.data import CategoryChartData
+from ranking import ranking_slide
 from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
 
 ROOT = Path(__file__).parent
@@ -35,7 +36,9 @@ def read_report(name, data):
                 frame = pd.DataFrame({'品項': names + ' [' + ids + ']', '商品ID': ids,
                                       '中文品名': names, '銷量': raw['QTY'],
                                       '品類': raw['LV1'].fillna('未分類').astype(str).str.strip(),
-                                      '次分類': raw['LV2'].fillna('未分類'), '銷售額': raw['Sales']})
+                                      '次分類': raw['LV2'].fillna('未分類'), '銷售額': raw['Sales'],
+                                      '單價': raw['PRICE'], '產品類型': raw['LV4'].fillna('未分類').replace({'Regular':'常態','Promotion':'活動','LTO':'期間限定'}),
+                                      '通路': raw['LV5'].fillna('').astype(str).str.strip(), 'AUV': raw['AUV']})
                 dates = [pd.to_datetime(header.iloc[1,i], errors='coerce') for i in (7,8)]
                 if any(pd.isna(v) for v in dates): raise ValueError('77Report 缺少有效起訖日期。')
                 frame.attrs.update(format='77Report', week=f'{dates[0]:%Y/%m/%d}–{dates[1]:%Y/%m/%d}',
@@ -134,6 +137,9 @@ class Handler(BaseHTTPRequestHandler):
             common=[c for c in frame.columns if all(c in f.columns for f in frames)]
             if self.path=='/inspect':
                 result=json.dumps({'columns':list(map(str,common)),'rows':sum(len(f) for f in frames),'preview':frame[common].head(5).astype(str).values.tolist(),'reports':[dict(f.attrs, name=r['name'], rows=len(f)) for f,r in zip(frames,reports)]},ensure_ascii=False).encode();ctype='application/json'
+            elif self.path=='/generate' and request.get('mode')=='公司排行表格（參考第5頁）':
+                weeks=[str(r.get('week') or f.attrs.get('week') or Path(r['name']).stem) for r,f in zip(reports,frames)]
+                result=ranking_slide(frames,weeks,request.get('title',''),request.get('rankingCategory','King Deal'),request.get('excludeFA',True));ctype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
             elif self.path=='/generate':
                 parts=[]
                 weeks=[str(r.get('week') or Path(r['name']).stem).strip() for r in reports]
