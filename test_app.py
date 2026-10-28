@@ -21,6 +21,24 @@ class WorkflowTests(unittest.TestCase):
         buf=BytesIO();frame.to_excel(buf,index=False)
         data=prepare(read_report('test.xlsx',buf.getvalue()),'品名','銷量',None)
         self.assertEqual(data.groupby('品項')['銷量'].sum()['A'],1020)
+    def test_wtd_format(self):
+        rows=[['metadata']+[None]*15,
+              ['BK_77Report',None,None,None,None,None,'Date',pd.Timestamp('2026-10-19'),pd.Timestamp('2026-10-25'),None,'All stores']+[None]*5,
+              ['LV1','LV2','LV3','LV4','LV5','LV6','ID','NAME','CNAME','PRICE','QTY','Sales','Sales%','Cost','AUV','Incidence'],
+              ['CORE','Beef',None,None,None,None,1,'English','同名',100,10,1000,0,0,0,0],
+              ['CORE','Beef',None,None,None,None,2,'English','同名',100,-1,-100,0,0,0,0],
+              [None]*10+[9999,0,0,0,0,0]]
+        buf=BytesIO()
+        with pd.ExcelWriter(buf,engine='openpyxl') as writer:
+            pd.DataFrame(rows).to_excel(writer,sheet_name='ALL',header=False,index=False)
+        frame=read_report('week.xlsx',buf.getvalue())
+        self.assertEqual(len(frame),2)
+        self.assertEqual(frame.attrs['week'],'2026/10/19–2026/10/25')
+        self.assertEqual(frame.attrs['negative_rows'],1)
+        data=prepare(frame,'品項','銷量','品類')
+        self.assertEqual(data['銷量'].sum(),9)
+        self.assertEqual(data['品項'].nunique(),2)
+
     def test_invalid_quantities(self):
         for values in [['x'],[-1],[0],['']]:
             with self.assertRaises(ValueError): prepare(pd.DataFrame({'p':['A'],'q':values}),'p','q',None)

@@ -20,7 +20,28 @@ def read_report(name, data):
                 continue
         raise ValueError('CSV 編碼無法辨識，請另存 UTF-8 CSV。')
     if name.lower().endswith('.xlsx'):
-        return pd.read_excel(BytesIO(data)).fillna('')
+        book = pd.ExcelFile(BytesIO(data))
+        if 'ALL' in book.sheet_names:
+            header = pd.read_excel(book, sheet_name='ALL', header=None, nrows=3)
+            labels = [str(v).strip() for v in header.iloc[2]] if len(header) >= 3 else []
+            if labels[:11] == ['LV1','LV2','LV3','LV4','LV5','LV6','ID','NAME','CNAME','PRICE','QTY']:
+                if str(header.iloc[1, 10]).strip().lower() != 'all stores':
+                    raise ValueError('77Report 找不到 All stores 區塊，請確認報表格式。')
+                raw = pd.read_excel(book, sheet_name='ALL', header=2, usecols=range(16))
+                valid = pd.to_numeric(raw['ID'], errors='coerce').notna()
+                raw = raw.loc[valid].copy()
+                ids = pd.to_numeric(raw['ID']).astype('int64').astype(str)
+                names = raw['CNAME'].fillna(raw['NAME']).fillna('未命名').astype(str).str.strip()
+                frame = pd.DataFrame({'品項': names + ' [' + ids + ']', '商品ID': ids,
+                                      '中文品名': names, '銷量': raw['QTY'],
+                                      '品類': raw['LV1'].fillna('未分類').astype(str).str.strip(),
+                                      '次分類': raw['LV2'].fillna('未分類'), '銷售額': raw['Sales']})
+                dates = [pd.to_datetime(header.iloc[1,i], errors='coerce') for i in (7,8)]
+                if any(pd.isna(v) for v in dates): raise ValueError('77Report 缺少有效起訖日期。')
+                frame.attrs.update(format='77Report', week=f'{dates[0]:%Y/%m/%d}–{dates[1]:%Y/%m/%d}',
+                                   start=f'{dates[0]:%Y-%m-%d}', negative_rows=int((frame['銷量'] < 0).sum()))
+                return frame.fillna('')
+        return pd.read_excel(book).fillna('')
     raise ValueError('請匯入 .xlsx 或 .csv 檔案。')
 
 def prepare(frame, product, quantity, category):
@@ -29,7 +50,7 @@ def prepare(frame, product, quantity, category):
     values = pd.to_numeric(frame[quantity].astype(str).str.replace(',', '', regex=False), errors='coerce')
     if values.isna().any():
         raise ValueError(f'銷量欄有 {int(values.isna().sum())} 筆空白或非數字，請修正報表後重新匯入。')
-    if (values < 0).any():
+    if (values < 0).any() and frame.attrs.get('format') != '77Report':
         raise ValueError('銷量包含負數；請先將退貨與銷售拆開，再匯入非負銷量。')
     names = frame[product].astype(str).str.strip()
     if names.eq('').any() or frame.empty:
@@ -59,7 +80,7 @@ def generate(data, mode, title, period):
     box(0,0,13.333,.14,'20B7A8')
     text(.5,.35,11,.6,title or '每週銷售洞察',30,bold=True)
     text(.55,1,12,.4, f'{period or "匯入期間"}  /  {mode}  /  資料依匯入報表計算',12,'63748A')
-    for x,label,value in [( .55,'總銷量',f'{total:,.0f}'),(4.7,'銷售品項',str(len(products))),(8.85,'第一名占比',f'{products.iloc[0]/total:.1%}')]:
+    for x,label,value in [( .55,'淨銷量（匯入期間）',f'{total:,.0f}'),(4.7,'銷售品項',str(len(products))),(8.85,'第一名占比',f'{products.iloc[0]/total:.1%}')]:
         box(x,1.65,3.9,1.15,'FFFFFF');text(x+.2,1.77,3.5,.3,label,12,'63748A');text(x+.2,2.08,3.5,.55,value,28,bold=True)
     box(.55,3.05,8.05,3.8,'FFFFFF');box(8.85,3.05,3.9,3.8,'172C45')
     if mode == '逐週銷量變化':
@@ -71,6 +92,7 @@ def generate(data, mode, title, period):
         note=f'最後一週銷量：{latest:,.0f}\n較前週變化：{growth}\n共比較 {len(chart_values)} 週。'
     elif mode == '品類占比':
         groups=data.groupby('品類')['銷量'].sum().sort_values(ascending=False)
+        if (groups < 0).any(): raise ValueError('品類淨銷量包含負數，無法產生占比圓環圖，請改選排行或趨勢。')
         chart_values=groups.head(6).copy()
         if len(groups)>6: chart_values.loc['其他（其餘品類）']=groups.iloc[6:].sum()
         kind=XL_CHART_TYPE.DOUGHNUT; heading='品類銷量結構'
@@ -111,16 +133,20 @@ class Handler(BaseHTTPRequestHandler):
             frame=frames[0]
             common=[c for c in frame.columns if all(c in f.columns for f in frames)]
             if self.path=='/inspect':
-                result=json.dumps({'columns':list(map(str,common)),'rows':sum(len(f) for f in frames),'preview':frame.head(5).astype(str).values.tolist()},ensure_ascii=False).encode();ctype='application/json'
+                result=json.dumps({'columns':list(map(str,common)),'rows':sum(len(f) for f in frames),'preview':frame[common].head(5).astype(str).values.tolist(),'reports':[dict(f.attrs, name=r['name'], rows=len(f)) for f,r in zip(frames,reports)]},ensure_ascii=False).encode();ctype='application/json'
             elif self.path=='/generate':
                 parts=[]
                 weeks=[str(r.get('week') or Path(r['name']).stem).strip() for r in reports]
                 if len(set(weeks))!=len(weeks): raise ValueError('各份報表的週別名稱不可重複。')
                 for f,week in zip(frames,weeks):
+                    if request.get('excludeOthers') and f.attrs.get('format') == '77Report':
+                        f=f.loc[f['品類'] != 'Others'].copy()
                     part=prepare(f,request['product'],request['quantity'],request.get('category'));part['週別']=week;parts.append(part)
                 data=pd.concat(parts,ignore_index=True)
                 if request['mode']=='品類占比' and not request.get('category'): raise ValueError('品類占比需要選擇品類欄位。')
-                result=generate(data,request['mode'],request['title'],request['period']);ctype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
+                period=request['period'] or ' / '.join(weeks)
+                if request.get('excludeOthers'): period += '（77Report 排除 Others）'
+                result=generate(data,request['mode'],request['title'],period);ctype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
             else: self.send_error(404);return
             self.send_response(200);self.send_header('Content-Type',ctype);self.end_headers();self.wfile.write(result)
         except Exception as exc:
